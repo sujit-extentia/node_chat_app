@@ -115,7 +115,7 @@
 			}
 		})
 		
-		socket.on('online_person_list', function(person_list){
+		socket.on('online_person_list', function(person_list){ 
 			$("#users_list_ul li").remove();
 			var person_list_arr = JSON.parse(person_list);
 			console.log("person_list>>", person_list);
