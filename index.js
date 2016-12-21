@@ -6,6 +6,8 @@ app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
+online_person_list = [];
+
 io.on('connection', function(socket){
   //console.log('a user connected');
   
@@ -22,8 +24,19 @@ io.on('connection', function(socket){
   
   socket.on('logged_in', function(msg){
    // console.log('logged_in message: ' + msg);
+   online_person_list.push(msg);
 	io.emit('show_loggedin', msg);
+	io.emit('online_person_list', JSON.stringify(online_person_list));
+	
   });
+  
+  socket.on('need_online_person_list', function(msg){
+   
+	io.emit('online_person_list', JSON.stringify(online_person_list));
+	
+  });
+  
+  
   
   socket.on('notify_typing_event', function(msg){
     //console.log('notify_typing_event message: ' + msg);

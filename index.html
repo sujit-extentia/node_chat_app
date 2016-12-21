@@ -17,13 +17,48 @@
 	  #users_list{float:left;width:20%}
 	  .notification{ font-style: italic;text-align:center}
 	  .user_name{font-weight:bold}
+	  #users_list_ul {
+    list-style: none;
+    padding:0;
+    margin:0;
+}
+#users_list_ul li { 
+    padding-left: 1em; 
+    text-indent: -.7em;
+}
+.user_li:before{
+	border: solid 1px green;
+	border-radius: 3px;
+	  content: '';
+    display: inline-block;
+    position: relative;
+    height: 8px;
+    width: 8px;
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    -moz-background-clip: padding;
+    -webkit-background-clip: padding-box;
+    background-clip: padding-box;
+    margin-right: 4px;
+    top: 2px;
+}
+
+.online_user_li:before {
+	 background-color: green;
+}
+
+.offline_user_li:before{
+    background-color: white;
+}
     </style>
   </head>
   <body>
 	<div id="messages_container">
 		<ul id="messages"></ul>
 	</div>
-	<div id="users_list"></div>
+	<div id="users_list">
+		<ul id="users_list_ul"></ul>
+	</div>
 	<div id="typing_msg"></div>
 
     <form action="">
@@ -36,7 +71,8 @@
 	<script>
 		
 	  var socket = io();
-	  
+	  var online_person_list = [];
+	  var current_user = "";
 	  //Send user details to server.
 	  var person = prompt("Please enter your name", "");
 		if(person) {
@@ -45,6 +81,7 @@
 	  
 	  $('form').submit(function(){
 		socket.emit('send_message',   person + "$$" + $('#m').val());
+		current_user = person;
 		$('#m').val('');
 		return false;
 	  });
@@ -62,7 +99,31 @@
 		socket.on('show_loggedin', function(person){
 			//console.log("E>>", person);
 			$("#messages").append("<li class='msg_row notification'><span class='user_name'>" + person + "</span> has joined</li>");
+			if(($.inArray( person, online_person_list )) !== -1) {
+				console.log("Relogin..");
+				//Re-login
+				$("#" + person).removeClass("offline_user_li").addClass("online_user_li");
+			} else {
+				console.log("online_person_list>>", online_person_list);
+				console.log("person>>", person);
+				//New login
+				online_person_list[person] = person;
+				if(current_user === person) //New logged in by current user, so fetch all users list
+					socket.emit('need_online_person_list',   person);
+				else
+					$("#users_list_ul").append("<li class='user_li online_user_li' id='" + person + "'>" + person + "</li>");
+			}
 		})
+		
+		socket.on('online_person_list', function(person_list){
+			$("#users_list_ul li").remove();
+			var person_list_arr = JSON.parse(person_list);
+			console.log("person_list>>", person_list);
+			$.each(person_list_arr, function( index, person ) {
+			  $("#users_list_ul").append("<li class='user_li online_user_li' id='" + person + "'>" + person + "</li>");
+			});
+		})
+		
 		
 		//On keypress, notify all users that current user is typing
 		$("#m").keypress(function(){
@@ -84,6 +145,8 @@
 			//console.log('user disconnected');
 			//socket.emit('person_disconnected',   person);
 			$("#messages").append("<li class='msg_row notification'><span class='user_name'>" + person + "</span> has left</li>");
+
+			$("#" + person).removeClass("online_user_li").addClass("offline_user_li");
 		  });
 		  
 		  window.addEventListener("beforeunload", function (e) {
