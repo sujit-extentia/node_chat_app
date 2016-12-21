@@ -12,14 +12,20 @@
       #messages li { padding: 5px 10px; }
       #messages li:nth-child(odd) { background: #eee; }
 	  form{margin-top:10px}
-	  /*#chat_history, .msg_row{width:100%;float:left}*/
-	  #messages_container{float:left;width:100%}
+	  #messages_container{float:left;width:80%}
+	  #typing_msg{width:100%;position: fixed; bottom: 45px;}
+	  #users_list{float:left;width:20%}
+	  .notification{ font-style: italic;text-align:center}
+	  .user_name{font-weight:bold}
     </style>
   </head>
   <body>
 	<div id="messages_container">
-    <ul id="messages"></ul>
+		<ul id="messages"></ul>
 	</div>
+	<div id="users_list"></div>
+	<div id="typing_msg"></div>
+
     <form action="">
 	  
       <input id="m" autocomplete="off" /><button>Send</button>
@@ -43,19 +49,52 @@
 		return false;
 	  });
 	  socket.on('chat_message', function(e){
-			console.log("e>>", e);
+			//console.log("e>>", e);
 			var person = e.split("$$")[0];
 			var msg = e.split("$$")[1];
-			console.log("person>>", person);
-			console.log("msg>>", msg);
+			/*console.log("person>>", person);
+			console.log("msg>>", msg);*/
 			
-			$("#messages").append("<li class='msg_row'>" + person + ": " + msg + "</li>");
+			$("#messages").append("<li class='msg_row'><span class='user_name'>" + person + "</span>: " + msg + "</li>");
+			$("#typing_msg").html("");
 		})
 		
 		socket.on('show_loggedin', function(person){
-			console.log("E>>", person);
-			$("#messages").append("<li class='msg_row'>" + person + " has joined</li>");
+			//console.log("E>>", person);
+			$("#messages").append("<li class='msg_row notification'><span class='user_name'>" + person + "</span> has joined</li>");
 		})
+		
+		//On keypress, notify all users that current user is typing
+		$("#m").keypress(function(){
+			//console.log("keypress by " + person);
+			socket.emit('notify_typing_event',   person);
+		});
+		
+		socket.on('is_typing', function(person){
+			//console.log("E>>", person);
+			$("#typing_msg").html(person + " is typing..");
+		})
+		
+		socket.on('disconnect', function(){
+			//console.log('user disconnected');
+			socket.emit('person_disconnected',   person);
+		  });
+		  
+		  socket.on('person_disconnected_ack', function(person){
+			//console.log('user disconnected');
+			//socket.emit('person_disconnected',   person);
+			$("#messages").append("<li class='msg_row notification'><span class='user_name'>" + person + "</span> has left</li>");
+		  });
+		  
+		  window.addEventListener("beforeunload", function (e) {
+			  /*var confirmationMessage = "\o/";
+
+			  (e || window.event).returnValue = confirmationMessage; //Gecko + IE
+			  return confirmationMessage;                            //Webkit, Safari, Chrome*/
+			  
+			  socket.emit('person_disconnected',   person);
+			  
+			}); 
 		
 	</script>
   </body>
